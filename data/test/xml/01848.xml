@@ -1,0 +1,26 @@
+<annotation>
+	<folder>test</folder>
+	<filename>01848.jpg</filename>
+	<path>./test/01848.jpg</path>
+	<source>
+		<database>DUT Anti-UAV Detection</database>
+	</source>
+	<size>
+		<width>1920</width>
+		<height>1080</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>UAV</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>1163</xmin>
+			<ymin>693</ymin>
+			<xmax>1204</xmax>
+			<ymax>721</ymax>
+		</bndbox>
+	</object>
+</annotation>

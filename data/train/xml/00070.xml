@@ -1,0 +1,26 @@
+<annotation>
+	<folder>train</folder>
+	<filename>00070.jpg</filename>
+	<path>./train/00070.jpg</path>
+	<source>
+		<database>DUT Anti-UAV Detection</database>
+	</source>
+	<size>
+		<width>2000</width>
+		<height>1428</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>UAV</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>391</xmin>
+			<ymin>185</ymin>
+			<xmax>1555</xmax>
+			<ymax>1088</ymax>
+		</bndbox>
+	</object>
+</annotation>
