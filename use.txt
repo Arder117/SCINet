@@ -1,0 +1,10 @@
+tar -xvzf SCINet.tar.gz
+
+pip install thop
+pip install -r requirements.txt
+python setup.py develop
+
+
+CUDA_VISIBLE_DEVICES=0 python basicsr/train.py --opt options/train/train_SCINet_x4.yml
+
+tar -czvf SCINet.tar.gz SCINet/
