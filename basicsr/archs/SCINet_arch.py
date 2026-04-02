@@ -953,9 +953,11 @@ class ResidualDenseBlock_5C(nn.Module):
 @ARCH_REGISTRY.register()
 class SCINet(nn.Module):
     def __init__(self, num_in_ch=3, num_feat=64, num_block=8, num_out_ch=3, upscale=4,
-                 conv='BSConvU', upsampler='pixelshuffledirect', p=0.25):
+                 conv='BSConvU', upsampler='pixelshuffledirect', p=0.25,
+                 return_features=False):
         super(SCINet, self).__init__()
         kwargs = {'padding': 1}
+        self.return_features = return_features
         if conv == 'BSConvS':
             kwargs = {'p': p}
         print(conv)
@@ -1199,6 +1201,52 @@ class SCINet(nn.Module):
         output = self.upsampler(out_lr)
     
         return output
+
+    def forward_features(self, input):
+        input = torch.cat([input, input, input, input], dim=1)
+        out_fea = self.fea_conv(input)
+
+        out_B1 = self.B1(out_fea)
+        out_B2 = self.B2(out_B1)
+        out_B3 = self.B3(out_B2)
+        out_B4 = self.B4(out_B3)
+        out_B5 = self.B5(out_B4)
+        out_B6 = self.B6(out_B5)
+        out_B7 = self.B7(out_B6)
+        out_B8 = self.B8(out_B7)
+        immediate_fea = [out_B2, out_B4, out_B6]
+
+        trunk = torch.cat([out_B1, out_B2, out_B3, out_B4, out_B5, out_B6, out_B7, out_B8], dim=1)
+        out_RB = self.c1(trunk)
+
+        out_GB = self.deep_conv(out_fea, immediate_fea)
+        out_GB = out_GB + out_fea
+
+        x_f_cat = torch.cat([out_RB, out_GB], dim=1)
+        x_f_cat = self.f_block(x_f_cat)
+        x_out = self.f_concat(x_f_cat)
+        x_out = self.GELU(x_out)
+
+        out_lr = self.c2(x_out) + out_fea
+        output = self.upsampler(out_lr)
+
+        return {
+            'sr': output,
+            'shallow': out_fea,
+            'spatial': out_RB,
+            'contrast': out_GB,
+            'fused_lr': x_out,
+            'reconstruction': out_lr,
+            'intermediate': immediate_fea
+        }
+
+    def forward(self, input, return_features=None):
+        features = self.forward_features(input)
+        if return_features is None:
+            return_features = self.return_features
+        if return_features:
+            return features
+        return features['sr']
 
 def switch_deploy_flag(deploy):
     global DEPLOY_FLAG
