@@ -70,3 +70,31 @@ CUDA_VISIBLE_DEVICES=0 python basicsr/train.py -opt options/train/train_SCINet_d
 
 - 当前数据集实现默认不做 bbox 对齐增强（如随机裁剪/翻转）。建议先跑通训练，再按需求补充带几何变换的标注同步增强。
 - 若出现 `No detection or SR supervision was provided.`，请检查 dataloader 是否正确返回上述监督键。
+
+
+## 8) XML 标注转换（VOC -> txt）
+
+如果你的标注是 VOC XML，可先转换为本仓库所需 txt：
+
+```bash
+python scripts/data_preparation/voc_xml_to_scinet_txt.py \
+  --xml_dir /path/to/Annotations \
+  --out_dir /path/to/train/ann \
+  --classes uav
+```
+
+输出每张图的同名 `*.txt`，每行：`x1 y1 x2 y2 class_id`。
+
+## 9) 推理与检测框可视化
+
+训练后可使用推理脚本直接解码 `heatmap/size/offset` 并画框：
+
+```bash
+python scripts/inference/scinet_detection_infer.py \
+  --opt options/train/train_SCINet_detection_x4.yml \
+  --checkpoint experiments/train_SCINet_detection_x4/models/net_g_latest.pth \
+  --input_dir /path/to/lq/images \
+  --output_dir ./results/det_vis
+```
+
+可调参数：`--topk`、`--score_thr`、`--nms_kernel`。
