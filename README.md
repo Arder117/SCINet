@@ -66,6 +66,48 @@ python basicsr/test.py -opt options/test/benchmark_SCINet_x4.yml
 
 The testing results will be saved in the ./results folder.
 
+## Downstream Detection mAP Template (SR -> Detector -> mAP)
+
+You can evaluate detection performance on SR outputs with:
+
+```shell
+python scripts/metrics/evaluate_sr_detection_map.py \
+  --detector yolo \
+  --model /path/to/yolo_or_rtdetr.pt \
+  --sr_dir /path/to/sr_results \
+  --ann_json /path/to/instances_test.json \
+  --out_json ./results/sr_detection_results.json
+```
+
+For LR baseline vs SR improvement, run the same script twice with `--sr_dir` pointing to LR images and SR images, then compare AP metrics.
+
+## Small-Object Detector Fine-Tuning Template
+
+If you need to fine-tune a downstream small-object detector, use:
+
+```shell
+python scripts/metrics/finetune_small_object_detector.py \
+  --detector yolo \
+  --model yolo11n.pt \
+  --download_model \
+  --data /path/to/dataset.yaml \
+  --epochs 100 \
+  --imgsz 1280 \
+  --batch 8 \
+  --device 0 \
+  --small_obj_preset
+```
+
+After training, use `scripts/metrics/evaluate_sr_detection_map.py` on SR images to measure mAP gain.
+
+
+You can also use ready-to-run training scripts:
+
+```shell
+bash scripts/metrics/train_small_object_yolo.sh /path/to/dataset.yaml
+bash scripts/metrics/train_small_object_rtdetr.sh /path/to/dataset.yaml
+```
+
 
 ## Citation
 If you find our work useful for your research, please consider citing our paper:
