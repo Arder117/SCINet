@@ -1,66 +1,72 @@
 # SCINet 小目标检测快速上手
 
-本仓库已经包含联合超分与检测的网络实现：
-- 检测骨干：`SCINetSmallTargetDetector`
-- 训练模型：`SCINetDetectionModel`
+已补齐可直接使用的数据集类与训练配置：
+- 数据集类：`SCINetDetectionDataset`
+- 训练配置：`options/train/train_SCINet_detection_x4.yml`
 
-## 1) 训练入口
+## 1) 标注格式
 
-使用新增配置文件：
+请在 `dataroot_ann` 下为每张图像准备同名 `.txt` 文件（例如 `0001.bmp` 对应 `0001.txt`）。
+
+每行一个目标框，格式为：
+
+```text
+x1 y1 x2 y2 [class_id]
+```
+
+- 坐标是 **GT 图像坐标系**（像素）
+- `class_id` 可省略，省略时默认 0
+
+## 2) 训练命令
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python basicsr/train.py -opt options/train/train_SCINet_detection_x4.yml
 ```
 
-> 如果你只使用 `PairedImageDataset`（仅返回 `lq/gt`），模型会只训练 SR 分支。要训练检测头，必须在 dataloader 中额外提供检测监督。
+## 3) dataloader 输出（已在数据集类中实现）
 
-## 2) dataloader 需要提供的键
+`SCINetDetectionDataset` 会返回：
 
-`SCINetDetectionModel.feed_data()` 支持以下输入：
+- `lq`
+- `gt`
+- `gt_heatmap`
+- `gt_size`
+- `gt_offset`
+- `gt_mask`
 
-- `lq`: 低分辨率输入
-- `gt`: 超分真值（可选，但建议保留）
-- `gt_heatmap`: 中心点热力图
-- `gt_size`: 中心点对应目标宽高（2 通道）
-- `gt_offset`: 中心点亚像素偏移（2 通道）
-- `gt_mask`: 回归有效位置掩码
+其中检测监督为 CenterNet 风格：
+- `gt_heatmap`: 目标中心高斯热图
+- `gt_size`: 中心点处目标宽高
+- `gt_offset`: 中心点亚像素偏移
+- `gt_mask`: size/offset 的有效位置掩码
 
-## 3) 损失组成
+## 4) 损失组成
 
 - `heatmap`: focal 风格损失
 - `size` / `offset`: masked L1
 - `sr`: 像素重建损失（L1）
 
-总损失权重由 yaml 中以下参数控制：
-
+总损失权重在 yaml 中可调：
 - `hm_weight`
 - `size_weight`
 - `off_weight`
 - `sr_weight`
 
-## 4) 推荐训练流程
+## 5) 推荐流程
 
-1. 先用 SR 配置预训练 SCINet 超分模型。  
-2. 在检测配置中设置 `path.pretrain_network_g` 加载预训练权重。  
-3. 联合训练（SR + Detection）并调节 4 个损失权重。  
+1. 先训练 SR 模型作为初始化。  
+2. 在检测配置中设置 `path.pretrain_network_g`。  
+3. 联合训练 SR + Detection。  
 
-## 5) 推理后处理（需要你补充）
+## 6) 推理后处理
 
-网络前向输出包含：
-- `heatmap`（先 sigmoid）
-- `size`
-- `offset`
+模型会输出 `heatmap/size/offset`，你需要在推理脚本中完成：
+1. heatmap Top-K
+2. offset 校正中心点
+3. size 还原 bbox
+4. NMS
 
-需要在推理脚本里完成：
-1. `heatmap` 取 Top-K 中心点
-2. 用 `offset` 修正中心坐标
-3. 用 `size` 还原 bbox
-4. 执行 NMS，得到最终检测结果
+## 7) 注意事项
 
-## 6) 常见问题
-
-- **报错 `No detection or SR supervision was provided.`**  
-  说明 dataloader 没有提供 `gt`，且也没提供检测监督键。
-
-- **只看到 SR 指标，没有检测指标**  
-  说明你的验证流程还没加入检测解码和 mAP/Recall 计算逻辑。
+- 当前数据集实现默认不做 bbox 对齐增强（如随机裁剪/翻转）。建议先跑通训练，再按需求补充带几何变换的标注同步增强。
+- 若出现 `No detection or SR supervision was provided.`，请检查 dataloader 是否正确返回上述监督键。

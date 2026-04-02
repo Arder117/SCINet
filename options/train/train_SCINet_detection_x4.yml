@@ -8,20 +8,12 @@ manual_seed: 0
 datasets:
   train:
     name: UAV_train_det
-    # NOTE:
-    # - PairedImageDataset only returns {lq, gt}.
-    # - To train detection heads, your dataset must additionally provide:
-    #   gt_heatmap, gt_size, gt_offset, gt_mask.
-    # Replace this dataset type with your custom detection dataset implementation.
-    type: PairedImageDataset
+    type: SCINetDetectionDataset
     dataroot_gt: ./data/train/gt
     dataroot_lq: ./data/train/lq
+    dataroot_ann: ./data/train/ann
     io_backend:
       type: disk
-
-    gt_size: 128
-    use_hflip: true
-    use_rot: true
 
     use_shuffle: true
     num_worker_per_gpu: 4
@@ -31,9 +23,10 @@ datasets:
 
   val:
     name: UAV_val_det
-    type: PairedImageDataset
+    type: SCINetDetectionDataset
     dataroot_gt: ./data/val/gt
     dataroot_lq: ./data/val/lq
+    dataroot_ann: ./data/val/ann
     io_backend:
       type: disk
 
