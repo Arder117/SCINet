@@ -183,6 +183,7 @@ class SRModel(BaseModel, nn.Module):  # 继承 torch.nn.Module
             if use_pbar:
                 pbar.update(1)
                 pbar.set_description(f'Test {img_name}')
+        
         avertimeperframe = np.mean(time_test)
         print("Aver time per frame cost %.3f ! " % avertimeperframe)
         if use_pbar:
@@ -194,6 +195,17 @@ class SRModel(BaseModel, nn.Module):  # 继承 torch.nn.Module
                 self._update_best_metric_result(dataset_name, metric, self.metric_results[metric], current_iter)
 
             self._log_validation_metric_values(current_iter, dataset_name, tb_logger)
+
+    def _log_validation_metric_values(self, current_iter, dataset_name, tb_logger):
+        """修复 AttributeError 补丁: 记录验证集指标"""
+        log_str = f'Validation {dataset_name} \n'
+        for metric, value in self.metric_results.items():
+            log_str += f'\t # {metric}: {value:.4f}'
+            if tb_logger:
+                tb_logger.add_scalar(f'metrics/{dataset_name}/{metric}', value, current_iter)
+        
+        logger = get_root_logger()
+        logger.info(log_str)
 
     def get_current_visuals(self):
         out_dict = OrderedDict()

@@ -1,0 +1,14 @@
+# 仅拦截压缩包
+*.tar.gz
+*.zip
+*.tgz
+*.rar
+
+# 拦截无用的系统/编辑器缓存
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.eggs/
+*.egg-info/
+=2
+untitled.txt

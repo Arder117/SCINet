@@ -107,7 +107,7 @@
 # #   port: 29500
 
 # general settings
-name: checkpoint_test_run  # 修改了名字，方便你在 experiments 下一眼找到测试文件夹
+name: checkpoint_test_run
 model_type: SRModel
 scale: 4
 num_gpu: 1 
@@ -118,8 +118,9 @@ datasets:
   train:
     name: UAV_train_our
     type: PairedImageDataset
-    dataroot_gt: /root/SCINet/data/gttrain/img
-    dataroot_lq: /root/SCINet/data/lqtrain/img
+    # [路径] 新机器训练集
+    dataroot_gt: /mnt/workspace/SCINet/data/gttrain/img
+    dataroot_lq: /mnt/workspace/SCINet/data/lqtrain/img
     io_backend:
       type: disk
 
@@ -129,20 +130,21 @@ datasets:
 
     # data loader
     use_shuffle: true
-    num_worker_per_gpu: 3 
-    batch_size_per_gpu: 128 # 保持 128 
-    dataset_enlarge_ratio: 1 # 测试时设为 1，让进度条显示更真实
+    num_worker_per_gpu: 8 
+    batch_size_per_gpu: 128 
+    dataset_enlarge_ratio: 100 
     prefetch_mode: ~
 
   val:
     name: UAV_valid_our
     type: PairedImageDataset
-    dataroot_gt: /root/SCINet/data/gtval/img
-    dataroot_lq: /root/SCINet/data/lqval/img
+    # [路径] 继续使用 mini 验证集，保证验证速度
+    dataroot_gt: /mnt/workspace/SCINet/data/gtval_mini/img
+    dataroot_lq: /mnt/workspace/SCINet/data/lqval_mini/img
     io_backend:
       type: disk
 
-# network structures (保持不变)
+# network structures
 network_g:
   type: SCINet
   num_in_ch: 3
@@ -156,7 +158,11 @@ network_g:
 path:
   pretrain_network_g: ~
   strict_load_g: true
-  resume_state: ~ 
+  # [断点设置] 改为你刚才测试成功生成的最新 checkpoint 
+  resume_state: /mnt/workspace/SCINet/experiments/checkpoint_test_run/training_states/40000.state
+  
+  # [实验根目录]
+  experiments_root: /mnt/workspace/SCINet/experiments
 
 # training settings
 train:
@@ -172,9 +178,10 @@ train:
     restart_weights: [1]
     eta_min: !!float 1e-7
 
-  total_iter: 30000 
+  total_iter: 300000  # 正式跑 30 万次
   warmup_iter: -1 
 
+  # losses
   pixel_opt:
     type: L1Loss
     loss_weight: 1.0
@@ -182,8 +189,9 @@ train:
 
 # validation settings
 val:
-  val_freq: !!float 100 # 每 100 次验证一次（测试用）
+  val_freq: !!float 5000  # 恢复每 5000 次验证一次
   save_img: false
+  pbar: true 
 
   metrics:
     psnr:
@@ -193,8 +201,8 @@ val:
 
 # logging settings
 logger:
-  print_freq: 20 # 每 20 次打印日志（测试用）
-  save_checkpoint_freq: !!float 100 # 每 100 次保存一次端点（测试核心！）
+  print_freq: 200        # 恢复每 200 次打印一次日志
+  save_checkpoint_freq: !!float 5000 # 恢复每 5000 次保存一次权重
   use_tb_logger: true
   wandb:
     project: ~

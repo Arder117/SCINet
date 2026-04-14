@@ -1,20 +1,72 @@
-name: HR_SR
-suffix: ~  # add suffix to saved images
+# name: HR_SR
+# suffix: ~  # add suffix to saved images
+# model_type: SRModel
+# scale: 4
+# crop_border: ~  # crop border when evaluation. If None, crop the scale pixels
+# num_gpu: 3 # set num_gpu: 0 for cpu mode
+# manual_seed: 0
+
+# datasets:
+#   test_1: # the 1st test dataset
+#     name: test_img
+#     type: PairedImageDataset
+#     dataroot_gt: /data/dl/SCINet-main-3-new/newdatasets/HR
+#     dataroot_lq: /data/dl/SCINet-main-3-new/newdatasets/HR
+#     io_backend:
+#       type: disk
+
+
+# # network structures
+# network_g:
+#   type: SCINet
+#   num_in_ch: 3
+#   num_feat: 64
+#   num_block: 8
+#   num_out_ch: 3
+#   upscale: 4
+#   # change_c: 15
+#   conv: BSConvU
+
+# # path
+# path:
+#   pretrain_network_g: /data/dl/SCINet-main/net_last_deploy_1.pth
+#   strict_load_g: true
+
+# # validation settings
+# val:
+#   save_img: True
+#   suffix: ~  # add suffix to saved images, if None, use exp name
+#   pbar: True
+#   metrics:
+# #    psnr: # metric name, can be arbitrary
+# #      type: calculate_psnr
+# #      crop_border: 5
+# #      test_y_channel: false
+# #    ssim:
+# #      type: calculate_ssim
+# #      crop_border: 5
+# #      test_y_channel: false
+
+
+# general settings
+name: UAV_Test_Result_Iter40000  # 本次测试的实验名称
 model_type: SRModel
 scale: 4
-crop_border: ~  # crop border when evaluation. If None, crop the scale pixels
-num_gpu: 3 # set num_gpu: 0 for cpu mode
+num_gpu: 1                     # 必须为 1
 manual_seed: 0
 
+# dataset and data loader settings
 datasets:
-  test_1: # the 1st test dataset
-    name: test_img
+  test_1:
+    name: UAV_Test_Set
     type: PairedImageDataset
-    dataroot_gt: /data/dl/SCINet-main-3-new/newdatasets/HR
-    dataroot_lq: /data/dl/SCINet-main-3-new/newdatasets/HR
+    # 路径核对无误
+    dataroot_gt: /mnt/workspace/SCINet/data/gttest/img
+    dataroot_lq: /mnt/workspace/SCINet/data/lqtest/img
     io_backend:
       type: disk
-
+    num_worker_per_gpu: 8   # 开启 8 个子进程并行处理 IO
+    batch_size_per_gpu: 4   # 既然显存才占 3G，一次性跑 4 张，能平摊 SSIM 的启动开销
 
 # network structures
 network_g:
@@ -24,25 +76,26 @@ network_g:
   num_block: 8
   num_out_ch: 3
   upscale: 4
-  # change_c: 15
   conv: BSConvU
 
 # path
 path:
-  pretrain_network_g: /data/dl/SCINet-main/net_last_deploy_1.pth
+  # [重点修改] 指向你刚刚 ls 出来的 40000 次权重文件
+  pretrain_network_g: /mnt/workspace/SCINet/experiments/checkpoint_test_run/models/net_g_80000.pth
   strict_load_g: true
 
 # validation settings
 val:
-  save_img: True
-  suffix: ~  # add suffix to saved images, if None, use exp name
-  pbar: True
+  save_img: true               # 必须为 true，这样才能在 results 文件夹看到生成的超分图
+  suffix: ~                    
+  pbar: true 
+
   metrics:
-#    psnr: # metric name, can be arbitrary
-#      type: calculate_psnr
-#      crop_border: 5
-#      test_y_channel: false
-#    ssim:
-#      type: calculate_ssim
-#      crop_border: 5
-#      test_y_channel: false
+    psnr:
+      type: calculate_psnr
+      crop_border: 4
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 4
+      test_y_channel: false
