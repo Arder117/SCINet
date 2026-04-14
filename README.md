@@ -52,6 +52,31 @@ CUDA_VISIBLE_DEVICES=0 python basicsr/train.py -opt options/train/train_SCINet_x
 CUDA_VISIBLE_DEVICES=0,1,2,3 python -m torch.distributed.launch --nproc_per_node=4 --master_port=4321 basicsr/train.py -opt options/train/train_SCINet-S_x4.yml --launcher pytorch
 ```
 
+### Two-stage training (CenterNet-style detector pretrain -> joint SR+Det)
+
+1. Download a detector checkpoint:
+
+```shell
+python scripts/metrics/download_centernet_style_checkpoint.py \
+  --url <YOUR_CENTERNET_STYLE_URL> \
+  --output experiments/pretrained_models/CenterNetStyle/centernet_style.pth
+```
+
+2. Run two-stage training helper:
+
+```shell
+python scripts/metrics/train_scinet_two_stage.py \
+  --base_opt options/train/train_SCINet_detection_x4.yml \
+  --run_name scinet_det_joint \
+  --sr_pretrain experiments/pretrained_models/net_g_SCINet_x4.pth \
+  --det_pretrain experiments/pretrained_models/CenterNetStyle/centernet_style.pth \
+  --det_param_key state_dict
+```
+
+The helper will:
+- Stage1: detector-oriented pretraining (`sr_weight=0`)  
+- Stage2: joint training using Stage1 output checkpoint
+
 For more training commands and details, please check the docs in [BasicSR](https://github.com/XPixelGroup/BasicSR)  
 
 ## How To Test
@@ -140,7 +165,6 @@ Some of the SR code is based on [BasicSR](https://github.com/XPixelGroup/BasicSR
 
 ## License
 MIT License. This code is only freely available for non-commercial research use.
-
 
 
 

@@ -45,7 +45,20 @@ network_g:
 
 path:
   # Optional: initialize from a pretrained SR checkpoint.
+  # Option A: load one full checkpoint for the joint model.
   pretrain_network_g: ~
+  # Option B (staged): load SR first, then partially load detection weights.
+  # pretrain_network_sr: experiments/pretrained_models/net_g_SCINet_x4.pth
+  # pretrain_network_det: /path/to/centernet_or_detector_ckpt.pth
+  # param_key_sr: params
+  # param_key_det: state_dict
+  # det_key_map:
+  #   hm.0.weight: head.heatmap.weight
+  #   hm.0.bias: head.heatmap.bias
+  #   wh.0.weight: head.size.weight
+  #   wh.0.bias: head.size.bias
+  #   reg.0.weight: head.offset.weight
+  #   reg.0.bias: head.offset.bias
   strict_load_g: false
   resume_state: ~
 
