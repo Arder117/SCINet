@@ -1,0 +1,16 @@
+# 忽略大文件和目录
+data/
+experiments/
+results/
+*.tar.gz
+*.zip
+*.pth
+*.pt
+*.ckpt
+*.h5
+*.npy
+*.npz
+checkpoint_*
+*.log
+__pycache__/
+*.pyc
