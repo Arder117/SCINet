@@ -23,10 +23,7 @@ class SCINetDetectionModel(BaseModel, nn.Module):
         self.net_g = self.model_to_device(self.net_g)
         self.print_network(self.net_g)
 
-        load_path = self.opt['path'].get('pretrain_network_g', None)
-        if load_path is not None:
-            param_key = self.opt['path'].get('param_key_g', 'params')
-            self.load_network(self.net_g, load_path, self.opt['path'].get('strict_load_g', True), param_key)
+        self._init_pretrained_weights()
 
         self.cri_pix = None
         if self.is_train:
@@ -46,6 +43,79 @@ class SCINetDetectionModel(BaseModel, nn.Module):
 
         self.setup_optimizers()
         self.setup_schedulers()
+
+    def _extract_state_dict(self, checkpoint_obj, param_key):
+        """Extract state dict from a checkpoint object."""
+        if isinstance(checkpoint_obj, dict):
+            if param_key in checkpoint_obj:
+                return checkpoint_obj[param_key]
+            if 'params' in checkpoint_obj:
+                return checkpoint_obj['params']
+            if 'state_dict' in checkpoint_obj:
+                return checkpoint_obj['state_dict']
+        return checkpoint_obj
+
+    def _load_by_key_and_shape(self, load_path, param_key='params', key_map=None, log_prefix='partial'):
+        """Load checkpoint tensors by matching key names (optionally remapped) and shapes.
+
+        Args:
+            load_path (str): Path to checkpoint.
+            param_key (str): Candidate root key in checkpoint dict.
+            key_map (dict | None): Optional source->target key remapping.
+            log_prefix (str): Prefix used in logger.
+        """
+        logger = get_root_logger()
+        net = self.get_bare_model(self.net_g)
+        current_state = net.state_dict()
+        loaded = torch.load(load_path, map_location=lambda storage, loc: storage)
+        loaded_state = self._extract_state_dict(loaded, param_key)
+        if not isinstance(loaded_state, dict):
+            logger.warning(f'[{log_prefix}] {load_path} has unsupported checkpoint format, skip.')
+            return
+
+        key_map = key_map or {}
+        matched = {}
+        skipped = []
+        for src_k, src_v in loaded_state.items():
+            tgt_k = key_map.get(src_k, src_k)
+            if tgt_k in current_state and current_state[tgt_k].shape == src_v.shape:
+                matched[tgt_k] = src_v
+            else:
+                skipped.append((src_k, tgt_k))
+
+        current_state.update(matched)
+        net.load_state_dict(current_state, strict=True)
+        logger.info(f'[{log_prefix}] loaded {len(matched)} tensors from {load_path}.')
+        if skipped:
+            logger.info(f'[{log_prefix}] skipped {len(skipped)} tensors due to key/shape mismatch.')
+
+    def _init_pretrained_weights(self):
+        """Support staged initialization for SR + detection."""
+        path_opt = self.opt.get('path', {})
+        strict_load_g = path_opt.get('strict_load_g', True)
+
+        # 1) Optional base full-network preload (same architecture recommended).
+        load_path = path_opt.get('pretrain_network_g', None)
+        if load_path is not None:
+            param_key = path_opt.get('param_key_g', 'params')
+            self.load_network(self.net_g, load_path, strict_load_g, param_key)
+
+        # 2) Optional SR-first staged preload (typically SCINet weights).
+        sr_load_path = path_opt.get('pretrain_network_sr', None)
+        if sr_load_path is not None:
+            sr_param_key = path_opt.get('param_key_sr', path_opt.get('param_key_g', 'params'))
+            self.load_network(self.net_g, sr_load_path, False, sr_param_key)
+
+        # 3) Optional detection staged preload (e.g., CenterNet-style head or same-arch detector).
+        det_load_path = path_opt.get('pretrain_network_det', None)
+        if det_load_path is not None:
+            det_param_key = path_opt.get('param_key_det', path_opt.get('param_key_g', 'params'))
+            det_key_map = path_opt.get('det_key_map', None)
+            self._load_by_key_and_shape(
+                load_path=det_load_path,
+                param_key=det_param_key,
+                key_map=det_key_map,
+                log_prefix='det_init')
 
     def setup_optimizers(self):
         train_opt = self.opt['train']
